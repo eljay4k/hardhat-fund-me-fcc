@@ -16,7 +16,7 @@ const networkConfig = {
     //31337:
 }
 // Declares local development chains into a variable
-const developmentChains = ["hardhat", "localHost"]
+const developmentChains = ["hardhat", "localhost"]
 // Declares an amount of decimal places for mock usage
 const DECIMALS = 8
 // Declares an initial price for MockV3Aggregator with 8 decimals

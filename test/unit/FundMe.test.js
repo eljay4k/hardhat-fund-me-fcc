@@ -1,6 +1,5 @@
-const { deployments, ethers, getNamedAccounts } = require("hardhat")
 const { assert, expect } = require("chai")
-const { solidity } = require("ethereum-waffle")
+const { deployments, ethers, getNamedAccounts } = require("hardhat")
 
 describe("FundMe", async function () {
     let fundMe
@@ -46,27 +45,28 @@ describe("FundMe", async function () {
             const response = await fundMe.priceFeed()
             assert.equal(response, mockV3Aggregator.address)
         })
-        // Uses waffle to use .to.be.reverted or .to.be.revertedWith syntax
-        describe("fund", async function () {
-            it("Fails if you don't send enough ETH", async function () {
-                await expect(fundMe.fund()).to.be.revertedWith(
-                    "Didn't send enough ETH"
-                )
-            })
-            it("Updated the amount funded data structure", async function () {
-                await fundMe.fund({ value: sendValue })
-                const response = await fundMe.addressToAmountFunded(deployer)
-                // Gets response (a BigNumber) and sendValue and compares them as strings
-                assert.equal(response.toString(), sendValue.toString())
-                console.log(sendValue.toString())
-            })
-            it("Adds funder to array of funders", async function () {
-                await fundMe.fund({ value: sendValue })
-                const funder = await fundMe.funders(0)
-                assert.equal(funder, deployer)
-            })
+    })
+    // Uses waffle to use .to.be.reverted or .to.be.revertedWith syntax
+    describe("fund", async function () {
+        it("Fails if you don't send enough ETH", async function () {
+            await expect(fundMe.fund()).to.be.revertedWith(
+                "Didn't send enough ETH"
+            )
+        })
+        it("Updated the amount funded data structure", async function () {
+            await fundMe.fund({ value: sendValue })
+            const response = await fundMe.addressToAmountFunded(deployer)
+            // Gets response (a BigNumber) and sendValue and compares them as strings
+            assert.equal(response.toString(), sendValue.toString())
+            console.log(sendValue.toString())
+        })
+        it("Adds funder to array of funders", async function () {
+            await fundMe.fund({ value: sendValue })
+            const funder = await fundMe.funders(0)
+            assert.equal(funder, deployer)
         })
     })
+
     describe("withdraw", async function () {
         beforeEach(async function () {
             await fundMe.fund({ value: sendValue })
@@ -74,20 +74,22 @@ describe("FundMe", async function () {
         // Arrange / Act / Assert Tests
         it("Withdraw ETH from a single founder", async function () {
             // Arrange
-            const startingFundMeBalance = await fundMe.provider.getBalance(
+            const startingFundMeBalance = await ethers.provider.getBalance(
                 fundMe.address
             )
-            const startingDeployerBalance = await fundMe.provider.getBalance(
+            const startingDeployerBalance = await ethers.provider.getBalance(
                 deployer
             )
             // Act
             const transactionResponse = await fundMe.withdraw()
             const transactionReceipt = await transactionResponse.wait(1)
+            const { gasUsed, effectiveGasPrice } = await transactionReceipt
+            const gasCost = gasUsed.mul(effectiveGasPrice)
 
-            const endingFundMeBalance = await fundMe.provider.getBalance(
+            const endingFundMeBalance = await ethers.provider.getBalance(
                 fundMe.address
             )
-            const endingDeployerBalance = await fundMe.provider.getBalance(
+            const endingDeployerBalance = await ethers.provider.getBalance(
                 deployer
             )
 
@@ -95,7 +97,7 @@ describe("FundMe", async function () {
             assert.equal(endingFundMeBalance, 0)
             assert.equal(
                 startingFundMeBalance.add(startingDeployerBalance),
-                endingDeployerBalance
+                endingDeployerBalance.add(gasCost).toString()
             )
         })
     })

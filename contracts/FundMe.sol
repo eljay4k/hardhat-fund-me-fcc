@@ -76,14 +76,14 @@ contract FundMe {
             "Didn't send enough ETH"
         );
         funders.push(msg.sender);
-        addressToAmountFunded[msg.sender] = msg.value;
+        addressToAmountFunded[msg.sender] += msg.value;
     }
 
-    function withdraw() public payable onlyOwner {
+    function withdraw() public onlyOwner {
         for (
             uint256 funderIndex = 0;
             funderIndex < funders.length;
-            funderIndex = funderIndex++
+            funderIndex++
         ) {
             address funder = funders[funderIndex];
             addressToAmountFunded[funder] = 0;
