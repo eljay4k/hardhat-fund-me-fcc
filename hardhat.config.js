@@ -27,7 +27,6 @@ module.exports = {
     networks: {
         hardhat: {
             chainId: 31337,
-            blockConfirmations: 1,
             // gasPrice: 130000000000,
         }, // Names the deployer account 0
         kovan: {
@@ -65,7 +64,7 @@ module.exports = {
         apiKey: ETHERSCAN_API_KEY,
     },
     gasReporter: {
-        enabled: true,
+        enabled: false,
         currency: "USD",
         outputFile: "gas-report.txt",
         noColors: true,
