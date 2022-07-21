@@ -1,122 +1,98 @@
 // SPDX-License-Identifier: MIT
-// 1. Pragma
-pragma solidity ^0.8.0;
-// 2. Imports
+// Best Practices in Solidity
+
+// 1. License Identifier
+
+// 2. Solidity Version
+pragma solidity ^0.8.8;
+
+// 3. Imports locally using yarn add --dev @chainlink/contracts
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 import "./PriceConverter.sol";
 
-// 3. Interfaces, Libraries, Contracts
+// 4. Custom Errors
 error FundMe__NotOwner();
 
-/**@title A sample Funding Contract
- * @author Patrick Collins
- * @notice This contract is for creating a sample funding contract
- * @dev This implements price feeds as our library
+// 5. Interfaces, Libraries and Contracts
+
+/** NatSpec
+ *  @title A Contract for Cowdfunding
+ *  @author Umoja Software Labs
+ *  @notice This contact is to demo a sample funding contract
+ *  @dev   This implements PriceFeed as a library
+
+ NatSpec can be used to automatically output user 
+ documentation by running solc  --userdoc --devdoc example.sol
+ in the terminal.
  */
+
 contract FundMe {
-    // Type Declarations
+    // 1. Type Declarations
     using PriceConverter for uint256;
 
-    // State variables
-    uint256 public constant MINIMUM_USD = 50 * 10**18;
-    address private immutable i_owner;
-    address[] private s_funders;
-    mapping(address => uint256) private s_addressToAmountFunded;
-    AggregatorV3Interface private s_priceFeed;
+    // 2. State Variables
+    mapping(address => uint256) public addressToAmountFunded;
+    address[] public funders;
+    uint256 public constant MINIMUM_USD = 50 * 1e18;
+    address public immutable i_owner;
+    AggregatorV3Interface public priceFeed;
 
-    // Events (we have none!)
+    // 3. Events
 
-    // Modifiers
+    // 4. Modifiers
     modifier onlyOwner() {
-        // require(msg.sender == i_owner);
-        if (msg.sender != i_owner) revert FundMe__NotOwner();
+        if (msg.sender != i_owner) {
+            revert FundMe__NotOwner();
+        }
         _;
     }
 
-    // Functions Order:
-    //// constructor
-    //// receive
-    //// fallback
-    //// external
-    //// public
-    //// internal
-    //// private
-    //// view / pure
+    /* 5. Functions
+       Function Order:
+       1. constructor
+       2. receive
+       3. fallback
+       4. external
+       5. public
+       6. internal
+       7. private
+       8. view / pure
+    */
 
-    constructor(address priceFeed) {
-        s_priceFeed = AggregatorV3Interface(priceFeed);
+    // Parameterizing priceFeedAddress
+    constructor(address priceFeedAddress) {
         i_owner = msg.sender;
+        priceFeed = AggregatorV3Interface(priceFeedAddress);
     }
 
-    /// @notice Funds our contract based on the ETH/USD price
+    /**
+     *  @notice This function funds this contract
+     *  @dev   This implements PriceFeed as a library
+     */
+
     function fund() public payable {
         require(
-            msg.value.getConversionRate(s_priceFeed) >= MINIMUM_USD,
-            "You need to spend more ETH!"
+            msg.value.getConversionRate(priceFeed) >= MINIMUM_USD,
+            "Didn't send enough ETH"
         );
-        // require(PriceConverter.getConversionRate(msg.value) >= MINIMUM_USD, "You need to spend more ETH!");
-        s_addressToAmountFunded[msg.sender] += msg.value;
-        s_funders.push(msg.sender);
+        funders.push(msg.sender);
+        addressToAmountFunded[msg.sender] = msg.value;
     }
 
     function withdraw() public payable onlyOwner {
         for (
             uint256 funderIndex = 0;
-            funderIndex < s_funders.length;
-            funderIndex++
-        ) {
-            address funder = s_funders[funderIndex];
-            s_addressToAmountFunded[funder] = 0;
-        }
-        s_funders = new address[](0);
-        // Transfer vs call vs Send
-        // payable(msg.sender).transfer(address(this).balance);
-        (bool success, ) = i_owner.call{value: address(this).balance}("");
-        require(success);
-    }
-
-    function cheaperWithdraw() public payable onlyOwner {
-        address[] memory funders = s_funders;
-        // mappings can't be in memory, sorry!
-        for (
-            uint256 funderIndex = 0;
             funderIndex < funders.length;
-            funderIndex++
+            funderIndex = funderIndex++
         ) {
             address funder = funders[funderIndex];
-            s_addressToAmountFunded[funder] = 0;
+            addressToAmountFunded[funder] = 0;
         }
-        s_funders = new address[](0);
-        // payable(msg.sender).transfer(address(this).balance);
-        (bool success, ) = i_owner.call{value: address(this).balance}("");
-        require(success);
-    }
+        funders = new address[](0);
 
-    /** @notice Gets the amount that an address has funded
-     *  @param fundingAddress the address of the funder
-     *  @return the amount funded
-     */
-    function getAddressToAmountFunded(address fundingAddress)
-        public
-        view
-        returns (uint256)
-    {
-        return s_addressToAmountFunded[fundingAddress];
-    }
-
-    function getVersion() public view returns (uint256) {
-        return s_priceFeed.version();
-    }
-
-    function getFunder(uint256 index) public view returns (address) {
-        return s_funders[index];
-    }
-
-    function getOwner() public view returns (address) {
-        return i_owner;
-    }
-
-    function getPriceFeed() public view returns (AggregatorV3Interface) {
-        return s_priceFeed;
+        (bool callSuccess, ) = payable(msg.sender).call{
+            value: address(this).balance
+        }("");
+        require(callSuccess, "Call failed");
     }
 }
